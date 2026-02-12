@@ -27,10 +27,12 @@ const DeploymentWizard: FC = function () {
     }
 
     try {
-        // !!! REPLACE THIS WITH YOUR EC2 PUBLIC IP !!!
+        // !!! YOUR EC2 IP !!!
         const EC2_IP = "3.110.42.40"; 
         
-        const response = await fetch(`http://${EC2_IP}:8000/deploy`, {
+        // --- THE FIX IS HERE ---
+        // We removed ":8000" so it goes through Nginx (Port 80)
+        const response = await fetch(`http://${EC2_IP}/deploy`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -52,7 +54,7 @@ const DeploymentWizard: FC = function () {
 
     } catch (error) {
         console.error("Connection Error:", error);
-        alert("❌ Could not connect to EC2.\nCheck if Port 8000 is open and Uvicorn is running.");
+        alert("❌ Could not connect to EC2.\n\nMake sure you updated Nginx on the server!");
     } finally {
         setIsDeploying(false);
     }
