@@ -28,7 +28,7 @@ const DeploymentWizard: FC = function () {
 
     try {
         // !!! REPLACE THIS WITH YOUR EC2 PUBLIC IP !!!
-        const EC2_IP = "13.232.166.106"; 
+        const EC2_IP = "3.110.42.40"; 
         
         const response = await fetch(`http://${EC2_IP}:8000/deploy`, {
             method: "POST",
