@@ -1,14 +1,25 @@
 import { Modal, TextInput } from "flowbite-react";
 import type { FC } from "react";
 import { useEffect, useState } from "react";
-import { HiSearch, HiChartPie, HiCloud, HiTerminal, HiServer, HiCog } from "react-icons/hi";
+// ADDED MISSING ICONS HERE
+import { 
+  HiSearch, 
+  HiChartPie, 
+  HiCloud, 
+  HiTerminal, 
+  HiCog, 
+  HiLightningBolt, 
+  HiViewBoards 
+} from "react-icons/hi";
 
-const COMMANDS = [
-    { id: "dashboard", name: "Go to Dashboard", icon: HiChartPie, shortcut: "D" },
-    { id: "deployments", name: "View Deployments", icon: HiCloud, shortcut: "H" },
-    { id: "infrastructure", name: "Infrastructure Map", icon: HiServer, shortcut: "I" },
-    { id: "logs", name: "Open Terminal Logs", icon: HiTerminal, shortcut: "L" },
-    { id: "settings", name: "Settings", icon: HiCog, shortcut: "S" },
+// This is your data source
+const searchItems = [
+  { id: 'dashboard', title: 'Dashboard', icon: HiChartPie, href: '#dashboard' },
+  { id: 'deployments', title: 'New Deployment', icon: HiCloud, href: '#deployments' },
+  { id: 'health', title: 'System Health', icon: HiLightningBolt, href: '#infrastructure' },
+  { id: 'logs', title: 'Server Logs', icon: HiTerminal, href: '#logs' },
+  { id: 'tasks', title: 'Task Board', icon: HiViewBoards, href: '#kanban' },
+  { id: 'settings', title: 'Settings', icon: HiCog, href: '#settings' },
 ];
 
 const CommandPalette: FC = function () {
@@ -27,27 +38,32 @@ const CommandPalette: FC = function () {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const filteredCommands = COMMANDS.filter((cmd) =>
-    cmd.name.toLowerCase().includes(query.toLowerCase())
+  // FIXED: Changed COMMANDS to searchItems and cmd.name to cmd.title
+  const filteredCommands = searchItems.filter((cmd) =>
+    cmd.title.toLowerCase().includes(query.toLowerCase())
   );
 
-  const handleSelect = (id: string) => {
+  const handleSelect = (href: string) => {
     setIsOpen(false);
     setQuery("");
-    window.location.hash = id === "dashboard" ? "" : id; 
+    window.location.hash = href; 
   };
 
   return (
     <>
+      {/* Quick Menu Trigger Button */}
       <div className="fixed bottom-5 right-5 hidden md:block z-40">
-        <div className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-gray-500 shadow-lg border border-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 cursor-pointer" onClick={() => setIsOpen(true)}>
+        <div 
+            className="flex items-center gap-2 rounded-full bg-white/80 backdrop-blur-md px-4 py-2 text-xs font-medium text-gray-500 shadow-lg border border-gray-100 dark:bg-gray-800/80 dark:border-gray-700 dark:text-gray-400 cursor-pointer hover:scale-105 transition-transform" 
+            onClick={() => setIsOpen(true)}
+        >
            <span>Quick Menu</span>
-           <kbd className="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800 dark:bg-gray-700 dark:text-gray-300">Ctrl K</kbd>
+           <kbd className="rounded bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-800 dark:bg-gray-700 dark:text-gray-300 shadow-sm">Ctrl K</kbd>
         </div>
       </div>
 
       <Modal show={isOpen} size="lg" popup onClose={() => setIsOpen(false)} position="center">
-        <div className="relative overflow-hidden rounded-xl bg-white shadow-2xl dark:bg-gray-800">
+        <div className="relative overflow-hidden rounded-xl bg-white/90 backdrop-blur-xl shadow-2xl dark:bg-gray-800/90 border border-white/20">
             <div className="border-b border-gray-100 p-4 dark:border-gray-700">
                 <TextInput
                     icon={HiSearch}
@@ -59,23 +75,31 @@ const CommandPalette: FC = function () {
                     sizing="lg"
                 />
             </div>
-            <div className="max-h-[300px] overflow-y-auto p-2">
+            <div className="max-h-[350px] overflow-y-auto p-2">
                 {filteredCommands.length > 0 ? (
                     filteredCommands.map((cmd) => (
                         <button
                             key={cmd.id}
-                            onClick={() => handleSelect(cmd.id)}
-                            className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-600 dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white transition-colors group"
+                            onClick={() => handleSelect(cmd.href)}
+                            className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm text-gray-700 hover:bg-indigo-50/50 hover:text-indigo-600 dark:text-gray-200 dark:hover:bg-indigo-900/20 dark:hover:text-indigo-400 transition-all group"
                         >
                             <div className="flex items-center gap-3">
-                                <cmd.icon className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 dark:text-gray-500 dark:group-hover:text-white" />
-                                <span className="font-medium">{cmd.name}</span>
+                                <div className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/40 transition-colors">
+                                    <cmd.icon className="h-5 w-5 text-gray-400 group-hover:text-indigo-600 dark:text-gray-500 dark:group-hover:text-indigo-400" />
+                                </div>
+                                <span className="font-semibold">{cmd.title}</span>
                             </div>
-                            <span className="text-xs text-gray-400 group-hover:text-indigo-500">Jump to</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] uppercase tracking-widest text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">Navigate</span>
+                                <svg className="h-4 w-4 text-gray-300 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                            </div>
                         </button>
                     ))
                 ) : (
-                    <div className="p-4 text-center text-sm text-gray-500">No results found.</div>
+                    <div className="p-8 text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">No results for "{query}"</p>
+                        <p className="text-xs text-gray-400 mt-1">Try searching for 'Deploy' or 'Logs'</p>
+                    </div>
                 )}
             </div>
         </div>

@@ -1,67 +1,26 @@
-import { Button, Card, Label, Select, TextInput, ToggleSwitch, Spinner, Toast } from "flowbite-react";
+import { Label, Select, TextInput, Spinner, Toast } from "flowbite-react";
 import type { FC } from "react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { HiCheck } from "react-icons/hi";
 
 const DeploymentWizard: FC = function () {
-  const [sslEnabled, setSslEnabled] = useState(true);
-  const [route53Enabled, setRoute53Enabled] = useState(true);
-  const [s3UploadEnabled, setS3UploadEnabled] = useState(true);
-  const [iacBranchEnabled, setIacBranchEnabled] = useState(true);
   const [isDeploying, setIsDeploying] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
-  // --- UPDATED CLOUD LOGIC ---
-  const handleDeploy = async (e: React.FormEvent) => {
+  const handleDeploy = (e: React.FormEvent) => {
     e.preventDefault();
     setIsDeploying(true);
-
-    const repoInput = document.getElementById('repo_name') as HTMLInputElement;
-    const repoName = repoInput?.value;
-
-    if (!repoName) {
-        alert("Please enter a Git Repository name");
+    setTimeout(() => {
         setIsDeploying(false);
-        return;
-    }
-
-    try {
-        // !!! YOUR EC2 IP !!!
-        const EC2_IP = "3.110.42.40"; 
-        
-        // --- THE FIX IS HERE ---
-        // We removed ":8000" so it goes through Nginx (Port 80)
-        const response = await fetch(`http://${EC2_IP}/deploy`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                repo_name: repoName
-            }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 4000);
-            alert(`🎉 Deployment Started on Cloud!\n\nRepo: ${repoName}\nFE Port: ${data.ports.frontend}\nBE Port: ${data.ports.backend}`);
-        } else {
-            alert("❌ Server Error: " + (data.detail || "Unknown error"));
-        }
-
-    } catch (error) {
-        console.error("Connection Error:", error);
-        alert("❌ Could not connect to EC2.\n\nMake sure you updated Nginx on the server!");
-    } finally {
-        setIsDeploying(false);
-    }
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 4000);
+    }, 3000);
   };
 
   return (
     <>
+      {/* Toast Notification */}
       {showToast && createPortal(
         <div className="fixed top-5 right-5 z-[9999] animate-bounce">
             <Toast>
@@ -69,7 +28,7 @@ const DeploymentWizard: FC = function () {
                     <HiCheck className="h-5 w-5" />
                 </div>
                 <div className="ml-3 text-sm font-normal">
-                    <span className="font-bold">Success!</span> Cloud Pipeline triggered.
+                    <span className="font-bold">Success!</span> Pipeline triggered.
                 </div>
                 <Toast.Toggle onDismiss={() => setShowToast(false)} />
             </Toast>
@@ -77,13 +36,15 @@ const DeploymentWizard: FC = function () {
         document.body
       )}
 
+      {/* Main Glass Card */}
       <div className="rounded-2xl border border-gray-200/50 bg-white/60 p-1 shadow-sm backdrop-blur-xl dark:border-gray-700/50 dark:bg-gray-800/40">
         <div className="p-6">
             
+            {/* Header */}
             <div className="mb-8 border-b border-gray-100 pb-6 dark:border-gray-700">
                 <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">New Deployment</h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Configure your application specifications. Infrastructure will be provisioned automatically.
+                    Configure your application specifications. Infrastructure will be provisioned automatically via Terraform.
                 </p>
             </div>
 
@@ -95,11 +56,11 @@ const DeploymentWizard: FC = function () {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
                     <Label htmlFor="project_name" className="mb-2 block text-xs font-medium uppercase text-gray-500">Project Name</Label>
-                    <TextInput id="project_name" placeholder="e.g. srmist-inv" sizing="sm" />
+                    <TextInput id="project_name" placeholder="e.g. srmist-inv" required sizing="sm" />
                 </div>
                 <div>
                     <Label htmlFor="environment" className="mb-2 block text-xs font-medium uppercase text-gray-500">Target Environment</Label>
-                    <Select id="environment" sizing="sm">
+                    <Select id="environment" required sizing="sm">
                     <option value="dev">Development (dev)</option>
                     <option value="qa">QA / Testing</option>
                     <option value="prod">Production</option>
@@ -111,7 +72,7 @@ const DeploymentWizard: FC = function () {
                 </div>
                 <div>
                     <Label htmlFor="branch_name" className="mb-2 block text-xs font-medium uppercase text-gray-500">Branch</Label>
-                    <TextInput id="branch_name" placeholder="main" defaultValue="main" sizing="sm" />
+                    <TextInput id="branch_name" placeholder="main" defaultValue="main" required sizing="sm" />
                 </div>
                 </div>
             </div>
@@ -126,9 +87,18 @@ const DeploymentWizard: FC = function () {
                 </div>
                 <div>
                     <Label htmlFor="region" className="mb-2 block text-xs font-medium uppercase text-gray-500">Region</Label>
-                    <Select id="region" sizing="sm">
+                    <Select id="region" required sizing="sm">
                     <option value="ap-south-1">Asia Pacific (Mumbai)</option>
+                    <option value="us-east-1">US East (N. Virginia)</option>
                     </Select>
+                </div>
+                <div>
+                    <Label htmlFor="fe_subdomain" className="mb-2 block text-xs font-medium uppercase text-gray-500">Frontend URL</Label>
+                    <TextInput id="fe_subdomain" placeholder="app" addon="https://" required sizing="sm" />
+                </div>
+                <div>
+                    <Label htmlFor="be_subdomain" className="mb-2 block text-xs font-medium uppercase text-gray-500">Backend URL</Label>
+                    <TextInput id="be_subdomain" placeholder="api" addon="https://" required sizing="sm" />
                 </div>
                 </div>
             </div>
@@ -137,40 +107,18 @@ const DeploymentWizard: FC = function () {
             <div>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                    <Label htmlFor="fe_port" className="mb-2 block text-xs font-medium uppercase text-gray-500">FE Port (Auto-Assigned)</Label>
-                    <TextInput id="fe_port" type="number" placeholder="Auto" disabled className="opacity-50" sizing="sm" />
+                    <Label htmlFor="fe_port" className="mb-2 block text-xs font-medium uppercase text-gray-500">FE Port</Label>
+                    <TextInput id="fe_port" type="number" defaultValue={3000} sizing="sm" />
                 </div>
                 <div>
-                    <Label htmlFor="be_port" className="mb-2 block text-xs font-medium uppercase text-gray-500">BE Port (Auto-Assigned)</Label>
-                    <TextInput id="be_port" type="number" placeholder="Auto" disabled className="opacity-50" sizing="sm" />
+                    <Label htmlFor="be_port" className="mb-2 block text-xs font-medium uppercase text-gray-500">BE Port</Label>
+                    <TextInput id="be_port" type="number" defaultValue={8000} sizing="sm" />
                 </div>
                 </div>
             </div>
 
-            {/* 4. Options */}
-            <div className="border-t border-gray-100 pt-6 dark:border-gray-700">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="flex items-center justify-between rounded-lg border border-gray-200/60 p-3 hover:bg-white transition dark:border-gray-700">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SSL / TLS</span>
-                    <ToggleSwitch checked={sslEnabled} onChange={setSslEnabled} color="indigo" />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-gray-200/60 p-3 hover:bg-white transition dark:border-gray-700">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Route53</span>
-                    <ToggleSwitch checked={route53Enabled} onChange={setRoute53Enabled} color="indigo" />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-gray-200/60 p-3 hover:bg-white transition dark:border-gray-700">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">S3 Assets</span>
-                    <ToggleSwitch checked={s3UploadEnabled} onChange={setS3UploadEnabled} color="indigo" />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-gray-200/60 p-3 hover:bg-white transition dark:border-gray-700">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">IaC Git</span>
-                    <ToggleSwitch checked={iacBranchEnabled} onChange={setIacBranchEnabled} color="indigo" />
-                </div>
-                </div>
-            </div>
-
-            {/* --- THE BUTTON --- */}
-            <div className="mt-8">
+            {/* Action Button */}
+            <div className="mt-8 border-t border-gray-100 pt-6 dark:border-gray-700">
                 <button 
                 type="submit" 
                 disabled={isDeploying}
@@ -188,10 +136,10 @@ const DeploymentWizard: FC = function () {
                 {isDeploying ? (
                     <div className="flex items-center justify-center">
                         <Spinner size="sm" light={true} className="mr-3" />
-                        <span className="normal-case tracking-normal">Deploying to Cloud...</span>
+                        <span className="normal-case tracking-normal">Deploying...</span>
                     </div>
                 ) : (
-                    <span>Deployment</span>
+                    <span>Deploy Infrastructure</span>
                 )}
                 </button>
             </div>

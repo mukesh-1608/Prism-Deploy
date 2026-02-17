@@ -15,7 +15,6 @@ import LoadingSkeleton from "../components/loading-skeleton";
 import CommandPalette from "../components/command-palette";
 
 // --- HELPER COMPONENT: PREMIUM GLASS CARD ---
-// The "Diamond" Glass effect: High blur, white border, subtle shadow
 const HoverCard: FC<{ children: React.ReactNode; className?: string }> = ({ children, className = "" }) => (
   <div
     className={`
@@ -72,9 +71,12 @@ const DashboardPage: FC = function () {
       setIsLoading(true);
       const hash = window.location.hash.replace("#", "");
       setCurrentView(hash === "" ? "dashboard" : hash);
-      setTimeout(() => setIsLoading(false), 800);
+      setTimeout(() => setIsLoading(false), 500); // Faster transition
     };
-    handleHashChange();
+    // Initialize view based on current hash
+    const initialHash = window.location.hash.replace("#", "");
+    if(initialHash) setCurrentView(initialHash);
+    
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
@@ -83,53 +85,74 @@ const DashboardPage: FC = function () {
     <>
       <CommandPalette />
       <NavbarSidebarLayout>
-        <div className="px-4 pt-6">
+        
+        {/* VIEW HEADER */}
+        <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold capitalize text-gray-900 dark:text-white">
+                {currentView === "infrastructure" ? "System Health" : currentView} Overview
+            </h1>
+        </div>
 
-          {/* CLEAN LAYOUT: No extra headers here. The Wizard component handles the title. */}
-          
-          {isLoading ? (
-              <LoadingSkeleton />
-          ) : (
-              <div className="animate-fade-in space-y-6">
-                  {currentView === "dashboard" && (
-                    <>
-                      {/* 1. Deployment Wizard (The Hero Card) */}
-                      <div className="transform transition-all duration-300 hover:scale-[1.005]">
-                        <DeploymentWizard />
-                      </div>
-                      
-                      {/* 2. Stats Grid */}
-                      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                          <DeploymentOverview />
-                          <ResourceUsage />
-                      </div>
-                      
-                      {/* 3. Logs & Health Grid */}
-                      <div className="grid grid-cols-1 gap-6">
+        {isLoading ? (
+            <LoadingSkeleton />
+        ) : (
+            <div className="animate-fade-in space-y-6">
+                
+                {/* 1. DASHBOARD VIEW (Pure Stats - No Wizard) */}
+                {currentView === "dashboard" && (
+                <>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                        <DeploymentOverview />
+                        <ResourceUsage />
+                    </div>
+                    
+                    {/* Logs & Health Grid */}
+                    <div className="grid grid-cols-1 gap-6">
                         <BuildLogs />
                         <ClusterHealth />
-                      </div>
-                    </>
-                  )}
+                    </div>
+                </>
+                )}
 
-                  {/* Other Views */}
-                  {currentView === "deployments" && ( <> <DeploymentHistory /> <BuildLogs /> </> )}
-                  {currentView === "infrastructure" && ( <InfrastructureView /> )}
-                  {currentView === "logs" && ( <ServerLogs /> )}
-                  {currentView === "kanban" && ( <KanbanBoard /> )}
-                  
-                  {/* Settings Placeholder */}
-                  {currentView === "settings" && (
-                      <div className="flex items-center justify-center h-96 text-gray-500 border-2 border-dashed border-gray-300/50 rounded-xl bg-white/30 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/30">
-                          <div className="text-center">
-                              <h3 className="text-xl font-bold mb-2">Settings Panel</h3>
-                              <p>User management and API keys configuration coming soon.</p>
-                          </div>
-                      </div>
-                  )}
-              </div>
-          )}
-        </div>
+                {/* 2. DEPLOYMENTS VIEW (Wizard + History) */}
+                {currentView === "deployments" && ( 
+                    <div className="space-y-8">
+                        {/* The Wizard is now here */}
+                        <div className="transform transition-all duration-300 hover:scale-[1.002]">
+                            <DeploymentWizard />
+                        </div>
+                        
+                        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Deployment History</h3>
+                             <DeploymentHistory />
+                        </div>
+                    </div> 
+                )}
+
+                {/* 3. INFRASTRUCTURE / SYSTEM HEALTH VIEW */}
+                {currentView === "infrastructure" && ( 
+                    <div className="space-y-6">
+                        <ClusterHealth />
+                        <InfrastructureView /> 
+                    </div>
+                )}
+
+                {/* Other Views */}
+                {currentView === "logs" && ( <ServerLogs /> )}
+                {currentView === "kanban" && ( <KanbanBoard /> )}
+                
+                {/* Settings Placeholder */}
+                {currentView === "settings" && (
+                    <div className="flex items-center justify-center h-96 text-gray-500 border-2 border-dashed border-gray-300/50 rounded-xl bg-white/30 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/30">
+                        <div className="text-center">
+                            <h3 className="text-xl font-bold mb-2">Settings Panel</h3>
+                            <p>User management and API keys configuration coming soon.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
       </NavbarSidebarLayout>
     </>
   );
@@ -150,7 +173,7 @@ const DeploymentOverview: FC = function () {
         </div>
       </div>
       <DeploymentChart />
-      <FooterLink label="Full Deployment Report" href="#deployments" />
+      <FooterLink label="Manage Deployments" href="#deployments" />
     </HoverCard>
   );
 };
@@ -177,14 +200,13 @@ const DeploymentChart: FC = function () {
 const ClusterHealth: FC = function () {
   return (
     <HoverCard>
-      <div className="mb-4 flex items-center justify-between"><h3 className="text-xl font-bold leading-none text-gray-900 dark:text-white">Cluster Node Health</h3><a href="#infrastructure" className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-500">View all nodes</a></div>
+      <div className="mb-4 flex items-center justify-between"><h3 className="text-xl font-bold leading-none text-gray-900 dark:text-white">System Health Status</h3><a href="#infrastructure" className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-500">View details</a></div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <NodeStatus name="api-gateway-v1" zone="us-east-1a" status="Healthy" color="green" />
           <NodeStatus name="postgres-primary" zone="us-east-1b" status="Healthy" color="green" />
           <NodeStatus name="redis-cache-01" zone="us-east-1a" status="Latency" color="yellow" />
           <NodeStatus name="worker-node-04" zone="us-east-1c" status="Offline" color="red" />
       </div>
-      <FooterLink label="System Health Report" href="#infrastructure" />
     </HoverCard>
   );
 };

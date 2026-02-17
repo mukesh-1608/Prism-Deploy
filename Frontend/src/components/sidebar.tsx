@@ -1,115 +1,102 @@
-import { DarkThemeToggle } from "flowbite-react";
 import type { FC } from "react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { DarkThemeToggle } from "flowbite-react";
 import {
   HiChartPie,
   HiCloud,
   HiTerminal,
-  HiCog,
-  HiServer,
   HiViewBoards,
+  HiCog,
+  HiLightningBolt,
 } from "react-icons/hi";
 
-const ExampleSidebar: FC = function () {
-  const [isHovered, setIsHovered] = useState(false);
-  const [activeHash, setActiveHash] = useState("");
+interface SidebarProps {
+    onHoverChange?: (isHovered: boolean) => void;
+}
 
-  const handleNav = (hash: string) => { 
-      window.location.hash = hash; 
-      setActiveHash(hash);
-  };
+const Sidebar: FC<SidebarProps> = function ({ onHoverChange }) {
+  const [currentPage, setCurrentPage] = useState("");
 
   useEffect(() => {
-      setActiveHash(window.location.hash.replace("#", ""));
+    const handleHashChange = () => {
+        const hash = window.location.hash || "#dashboard";
+        setCurrentPage(hash);
+    };
+    handleHashChange();
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
-  // Standard item style
-  const getItemClass = (hash: string) => `
-      flex items-center p-3 rounded-xl transition-all duration-200 cursor-pointer group
-      ${activeHash === hash 
-          ? 'bg-indigo-50/80 text-indigo-700 shadow-sm dark:bg-indigo-900/30 dark:text-indigo-300' 
-          : 'hover:bg-white/40 text-gray-500 hover:text-gray-900 dark:hover:bg-gray-800/30 dark:hover:text-white dark:text-gray-400'}
-  `;
-
-  // Icon style
-  const getIconClass = (hash: string) => `
-      w-6 h-6 transition duration-75 
-      ${activeHash === hash ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-400 group-hover:text-gray-900 dark:text-gray-500 dark:group-hover:text-white'}
-  `;
-
   return (
-    <aside
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`fixed left-0 top-0 z-40 h-screen pt-20 transition-all duration-300 ease-in-out ${
-        isHovered ? "w-64" : "w-20"
-      }`}
-      aria-label="Sidebar"
+    // UPDATED WIDTH: hover:w-56 (Was w-64)
+    <aside 
+        onMouseEnter={() => onHoverChange && onHoverChange(true)}
+        onMouseLeave={() => onHoverChange && onHoverChange(false)}
+        className="h-full w-16 hover:w-56 group transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.25,1)] bg-transparent hover:bg-white/5 dark:hover:bg-gray-900/20 backdrop-blur-none border-none shadow-none overflow-hidden flex flex-col justify-between pt-4"
     >
-      {/* NATIVE DIV instead of Flowbite Sidebar to force transparency */}
-      <div className="h-full px-3 py-4 overflow-y-auto bg-transparent">
-        <ul className="space-y-2 font-medium">
+      
+      {/* MENU ITEMS */}
+      <div className="space-y-2 flex flex-col items-start w-full px-2">
+        <SidebarItem href="#dashboard" icon={HiChartPie} label="Dashboard" active={currentPage === "#dashboard" || currentPage === ""} />
+        <SidebarItem href="#deployments" icon={HiCloud} label="Deployments" active={currentPage === "#deployments"} />
+        <SidebarItem href="#infrastructure" icon={HiLightningBolt} label="System Health" active={currentPage === "#infrastructure"} />
+        <SidebarItem href="#logs" icon={HiTerminal} label="Server Logs" active={currentPage === "#logs"} />
+        <SidebarItem href="#kanban" icon={HiViewBoards} label="Task Board" active={currentPage === "#kanban"} />
+      </div>
+
+      {/* BOTTOM SECTION */}
+      <div className="py-4 w-full px-2 space-y-2">
+        
+        {/* Settings */}
+        <SidebarItem href="#settings" icon={HiCog} label="Settings" active={currentPage === "#settings"} />
+        
+        {/* THEME TOGGLE */}
+        <div className="relative flex items-center h-12 w-full px-3 rounded-xl text-gray-500 hover:text-indigo-600 hover:bg-white/10 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/5 transition-all duration-200 cursor-pointer">
+            <div className="flex-shrink-0 w-6 flex justify-center pointer-events-auto">
+                <DarkThemeToggle className="p-0 border-0 ring-0 focus:ring-0 bg-transparent hover:bg-transparent text-current shadow-none" />
+            </div>
             
-            {/* 1. Dashboard */}
-            <li>
-                <div onClick={() => handleNav("")} className={getItemClass("")}>
-                    <HiChartPie className={getIconClass("")} />
-                    <span className={`ml-3 whitespace-nowrap transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 hidden'}`}>Dashboard</span>
-                </div>
-            </li>
-
-            {/* 2. Deployments */}
-            <li>
-                <div onClick={() => handleNav("deployments")} className={getItemClass("deployments")}>
-                    <HiCloud className={getIconClass("deployments")} />
-                    <span className={`ml-3 whitespace-nowrap transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 hidden'}`}>Deployments</span>
-                </div>
-            </li>
-
-            {/* 3. Infrastructure */}
-            <li>
-                <div onClick={() => handleNav("infrastructure")} className={getItemClass("infrastructure")}>
-                    <HiServer className={getIconClass("infrastructure")} />
-                    <span className={`ml-3 whitespace-nowrap transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 hidden'}`}>Infrastructure</span>
-                </div>
-            </li>
-
-            {/* 4. Logs */}
-            <li>
-                <div onClick={() => handleNav("logs")} className={getItemClass("logs")}>
-                    <HiTerminal className={getIconClass("logs")} />
-                    <span className={`ml-3 whitespace-nowrap transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 hidden'}`}>Server Logs</span>
-                </div>
-            </li>
-
-            {/* 5. Kanban */}
-            <li>
-                <div onClick={() => handleNav("kanban")} className={getItemClass("kanban")}>
-                    <HiViewBoards className={getIconClass("kanban")} />
-                    <span className={`ml-3 whitespace-nowrap transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 hidden'}`}>Kanban Board</span>
-                </div>
-            </li>
-
-            {/* 6. Settings */}
-            <li>
-                <div onClick={() => handleNav("settings")} className={getItemClass("settings")}>
-                    <HiCog className={getIconClass("settings")} />
-                    <span className={`ml-3 whitespace-nowrap transition-opacity ${isHovered ? 'opacity-100' : 'opacity-0 hidden'}`}>Settings</span>
-                </div>
-            </li>
-
-        </ul>
-
-        {/* Bottom Section */}
-        <div className="absolute bottom-5 left-0 w-full px-3">
-             <div className={`flex items-center p-3 rounded-xl transition-all duration-200 ${isHovered ? 'bg-white/30 dark:bg-gray-800/30' : ''}`}>
-                <DarkThemeToggle className="focus:ring-0" />
-                <span className={`ml-3 text-sm text-gray-500 dark:text-gray-400 ${isHovered ? 'block' : 'hidden'}`}>Theme</span>
-             </div>
+            <span className="ml-4 text-sm font-bold whitespace-nowrap tracking-wide opacity-0 group-hover:opacity-100 transition-all duration-300 delay-75 transform translate-x-[-10px] group-hover:translate-x-0">
+                Switch Theme
+            </span>
         </div>
+
       </div>
     </aside>
   );
 };
 
-export default ExampleSidebar;
+function SidebarItem({ href, icon: Icon, label, active }: any) {
+    return (
+        <a 
+            href={href}
+            className={`
+                relative flex items-center h-12 w-full px-3 rounded-xl
+                transition-all duration-200
+                ${active 
+                    ? "text-indigo-600 bg-white/10 shadow-none dark:text-indigo-400 dark:bg-white/5" 
+                    : "text-gray-500 hover:text-indigo-600 hover:bg-white/10 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/5"
+                }
+            `}
+        >
+            <div className="flex-shrink-0 w-6 flex justify-center">
+                <Icon className={`w-6 h-6 ${active ? 'filter drop-shadow-sm' : ''}`} />
+            </div>
+
+            <span className={`
+                ml-4 text-sm font-bold whitespace-nowrap tracking-wide
+                opacity-0 group-hover:opacity-100 
+                transition-all duration-300 delay-75
+                transform translate-x-[-10px] group-hover:translate-x-0
+            `}>
+                {label}
+            </span>
+            
+            {active && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-1 bg-indigo-600 rounded-full"></div>
+            )}
+        </a>
+    )
+}
+
+export default Sidebar;

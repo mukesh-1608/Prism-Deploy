@@ -1,85 +1,82 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-import subprocess
+import time
+import jwt
 import os
-import socket
+from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
 
 app = FastAPI()
+security = HTTPBearer()
 
-# 1. ENABLE CORS
+# --- CONFIGURATION ---
+# In a real app, this comes from AWS. For now, it's our local secret.
+SECRET_KEY = "prism-local-development-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
+
+# Enable CORS so your React Frontend can talk to this Python Backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 2. DATA MODEL
-class DeploymentRequest(BaseModel):
-    repo_name: str
+# --- DATA MODELS ---
+class LoginRequest(BaseModel):
+    org_id: str
 
-# 3. HELPER: FIND FREE PORT
-def find_free_port(start_port=3000):
-    port = start_port
-    while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            in_use = s.connect_ex(('localhost', port)) == 0
-            if not in_use:
-                return port
-            port += 1
+# --- 1. THE LOGIN ENDPOINT (Issues the Badge) ---
+@app.post("/api/login")
+async def login(request: LoginRequest):
+    """
+    Takes an Org ID, validates it (mock logic), and returns a signed JWT.
+    """
+    # MOCK VALIDATION: In real life, AWS checks the password here.
+    # We just check if they typed something.
+    if not request.org_id or len(request.org_id) < 3:
+        raise HTTPException(status_code=400, detail="Invalid Organization ID")
 
-# 4. HELPER: RUN SCRIPT
-def run_shell_script(repo_name: str, fe_port: int, be_port: int):
-    # POINTING TO YOUR SPECIFIC FILE NAME
-    script_path = "../MyScriptIO373.sh" 
+    # Create the Badge (JWT)
+    expiration = time.time() + (ACCESS_TOKEN_EXPIRE_MINUTES * 60)
     
-    # Check if script exists
-    if not os.path.exists(script_path):
-        print(f"❌ ERROR: Script not found at {os.path.abspath(script_path)}")
-        return
-
-    print(f"🚀 STARTING SCRIPT: {repo_name} | FE: {fe_port} | BE: {be_port}")
+    token_data = {
+        "sub": "user_dev_01",       # Subject (User ID)
+        "org": request.org_id,      # Organization
+        "role": "admin",            # Role
+        "exp": expiration           # Expiration Time (15 mins from now)
+    }
     
-    try:
-        # We use "bash" to run the script. Ensure you have Git Bash installed.
-        process = subprocess.Popen(
-            ["bash", script_path, repo_name, str(fe_port), str(be_port)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        stdout, stderr = process.communicate()
-        
-        if process.returncode == 0:
-            print(f"✅ SUCCESS for {repo_name}:\n{stdout}")
-        else:
-            print(f"⚠️ FAILED for {repo_name}:\n{stderr}")
-            
-    except Exception as e:
-        print(f"❌ EXCEPTION: {str(e)}")
-
-# 5. API ENDPOINT
-@app.post("/deploy")
-async def deploy_project(request: DeploymentRequest, background_tasks: BackgroundTasks):
-    
-    fe_port = find_free_port(3000)
-    be_port = find_free_port(8000)
-    
-    background_tasks.add_task(run_shell_script, request.repo_name, fe_port, be_port)
+    # Sign the token using our secret key
+    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
     
     return {
-        "status": "queued",
-        "message": f"Deployment started for {request.repo_name}",
-        "ports": {
-            "frontend": fe_port,
-            "backend": be_port
-        },
-        "url": f"https://{request.repo_name}.srm-tech.com"
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
 
-@app.get("/")
-def read_root():
-    return {"status": "Backend is running!"}
+# --- 2. THE BOUNCER (Verifies the Badge) ---
+async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Use this function to protect future routes. 
+    It ensures the user has a valid, unexpired badge.
+    """
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session Expired. Please login again.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid Authentication Token")
+
+# --- 3. SYSTEM CHECK ---
+@app.get("/health")
+async def health_check():
+    return {"status": "Prism Auth System Online", "mode": "MOCK_AWS_SSO"}
+
+# Run with: python main.py
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
